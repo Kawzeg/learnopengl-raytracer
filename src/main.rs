@@ -2,7 +2,7 @@ mod raytracer;
 use raytracer::Raytracer;
 
 mod renderer;
-use renderer::{Renderer, SineRenderer};
+use renderer::{Renderer};
 
 use miniquad::*;
 
@@ -77,6 +77,29 @@ impl<R: Renderer> EventHandler for Stage<R> {
         texture.set_filter(ctx, FilterMode::Nearest);
         self.bindings.images = vec![texture];
 
+        let r2 = width as f32 / height as f32;
+        let (screen_width, screen_height) = ctx.screen_size();
+        let r1 = screen_width / screen_height;
+
+        let x0;
+        let y0;
+        if r2 > r1 {
+            x0 = -1.;
+            y0 = r1 / r2;
+        } else {
+            y0 = -1.;
+            x0 = r2/r1;
+        }
+        
+        let vertices: [Vertex; 4] = [
+            Vertex { pos: Vec2 { x:  x0, y:  y0 }, uv: Vec2 { x: 0., y: 0. } },
+            Vertex { pos: Vec2 { x: -x0, y:  y0 }, uv: Vec2 { x: 1., y: 0. } },
+            Vertex { pos: Vec2 { x: -x0, y: -y0 }, uv: Vec2 { x: 1., y: 1. } },
+            Vertex { pos: Vec2 { x:  x0, y: -y0 }, uv: Vec2 { x: 0., y: 1. } },
+        ];
+        let vertex_buffer = Buffer::immutable(ctx, BufferType::VertexBuffer, &vertices);
+        self.bindings.vertex_buffers = vec![vertex_buffer];
+
         let dt = date::now() - t;
         println!("Update took {}s", dt);
     }
@@ -98,7 +121,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
 
 fn main() {
     miniquad::start(conf::Conf::default(), |mut ctx| {
-        UserData::owning(Stage::new(&mut ctx, SineRenderer {}), ctx)
+        UserData::owning(Stage::new(&mut ctx, Raytracer::new()), ctx)
     });
 }
 
