@@ -63,7 +63,6 @@ impl Sphere {
 impl Renderable for Sphere {
     fn intersects(&self, r: &Ray) -> bool {
         let d = Sphere::distance(r, self.pos);
-        println!("Ray {:?} passes at distance {}", r, d);
         d < self.r
     }
 }
@@ -106,7 +105,7 @@ impl Raytracer {
         }
     }
 
-    fn frustum(&self) -> (f64, f64, f64, f64, f64, f64) {
+    fn frustum(&self) -> (f64, f64, f64, f64) {
         let x0 = -0.577350; // FIXME calculate
         let x1 = -x0;
         let ratio = (WIDTH as f64) / (HEIGHT as f64);
@@ -114,16 +113,16 @@ impl Raytracer {
         let y1 = -y0;
         let dx = (x1 - x0) / WIDTH as f64;
         let dy = (y1 - y0) / HEIGHT as f64;
-        (x0, y0, x1, y1, dx, dy)
+        (x0, y0, dx, dy)
     }
 }
 
-const WIDTH: u16 = 20;
-const HEIGHT: u16 = 10;
+const WIDTH: u16 = 2000;
+const HEIGHT: u16 = 1500;
 
 impl Renderer for Raytracer {
     fn render(&mut self, _t: f64) -> (Vec<u8>, u16, u16) {
-        let (x0, y0, x1, y1, dx, dy) = self.frustum();
+        let (x0, y0, dx, dy) = self.frustum();
 
         let mut pixels = vec![0xFF; 4 * WIDTH as usize * HEIGHT as usize];
 
@@ -139,7 +138,7 @@ impl Renderer for Raytracer {
                 };
                 for obj in &self.scene {
                     if obj.intersects(&ray) {
-                        let i = (((y * WIDTH) + x) * 4) as usize;
+                        let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
                         pixels[i] = 0x00;
                         pixels[i + 1] = 0;
                         pixels[i + 2] = 0;
