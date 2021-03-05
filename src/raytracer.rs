@@ -32,7 +32,7 @@ impl Vec3 {
     }
 
     fn theta(&self, other: &Vec3) -> f64 {
-        (self.dot(other.norm()) / self.mag()).acos()
+        self.norm().dot(other.norm()).acos()
     }
 
     const NULL: Vec3 = Vec3 {
@@ -185,9 +185,9 @@ impl Raytracer {
             near_plane: 1.,
             fov: 60.,
             sunlight: Vec3 {
-                x: 1.,
-                y: 3.,
-                z: 1.,
+                x: 0.,
+                y: -1.,
+                z: 0.,
             },
         }
     }
@@ -211,6 +211,8 @@ impl Renderer for Raytracer {
     fn render(&mut self, _t: f64) -> (Vec<u8>, u16, u16) {
         let (x0, y0, dx, dy) = self.frustum();
 
+        println!("x0={}, y0={}", x0, y0);
+
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
 
         for y in 0..HEIGHT {
@@ -229,12 +231,16 @@ impl Renderer for Raytracer {
                         let sun_angle = reflection.q.theta(&self.sunlight);
                         let lightness = normalize(sun_angle, PI);
                         let gray: u8 = (lightness * 255.).round() as u8;
-                        
 
                         let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
-                        let r = 0x18;
-                        let g = 0x39;
-                        let b = 0x3E;
+                        let r = 0x18 as f64;
+                        let g = 0x39 as f64;
+                        let b = 0x3E as f64;
+                        /*
+                        pixels[i] = (lightness * r).round() as u8;
+                        pixels[i + 1] = (lightness * g).round() as u8;
+                        pixels[i + 2] = (lightness * b).round() as u8;
+                        */
                         pixels[i] = gray;
                         pixels[i + 1] = gray;
                         pixels[i + 2] = gray;

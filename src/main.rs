@@ -2,7 +2,7 @@ mod raytracer;
 use raytracer::Raytracer;
 
 mod renderer;
-use renderer::{Renderer};
+use renderer::{LightUpRenderer, Renderer, SineRenderer};
 
 mod util;
 
@@ -87,10 +87,10 @@ impl<R: Renderer> EventHandler for Stage<R> {
         let y0;
         if r2 > r1 {
             x0 = -1.;
-            y0 = r1 / r2;
+            y0 = -r1 / r2;
         } else {
             y0 = -1.;
-            x0 = r2/r1;
+            x0 = -r2 / r1;
         }
         
         let vertices: [Vertex; 4] = [
@@ -123,7 +123,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
 
 fn main() {
     miniquad::start(conf::Conf::default(), |mut ctx| {
-        UserData::owning(Stage::new(&mut ctx, Raytracer::new()), ctx)
+        UserData::owning(Stage::new(&mut ctx, LightUpRenderer{}), ctx)
     });
 }
 

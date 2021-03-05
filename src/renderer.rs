@@ -15,7 +15,6 @@ const CHUNK_WIDTH_B: u16 = TEXTURE_WIDTH + 1;
 pub struct SineRenderer {}
 
 impl SineRenderer {
-
     fn b(t: f64, i: usize) -> u8 {
         let progress = normalize(i as f64, CHUNK_WIDTH_B);
         let tm = normalize(t, SECONDS);
@@ -51,6 +50,25 @@ impl Renderer for SineRenderer {
 
         for i in (3..TEXTURE_SIZE).step_by(4) {
             pixels[i] = 0xFF; // Alpha
+        }
+        (pixels, TEXTURE_WIDTH, TEXTURE_HEIGHT)
+    }
+}
+
+pub struct LightUpRenderer {}
+
+impl Renderer for LightUpRenderer {
+    fn render(&mut self, t: f64) -> (Vec<u8>, u16, u16) {
+        let mut pixels: Vec<u8> = vec![0x00; TEXTURE_SIZE];
+        for y in 0..TEXTURE_HEIGHT as usize {
+            for x in 0..TEXTURE_WIDTH {
+                let i = (x as usize + (y * TEXTURE_WIDTH as usize) as usize) * 4;
+                let v = (normalize(y as f64, TEXTURE_HEIGHT as f64) * 255.).round() as u8;
+                pixels[i] = v;
+                pixels[i+1] = v;
+                pixels[i+2] = v;
+                pixels[i+3] = 0xFF;
+            }
         }
         (pixels, TEXTURE_WIDTH, TEXTURE_HEIGHT)
     }
