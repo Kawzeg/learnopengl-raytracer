@@ -33,7 +33,9 @@ impl Stage {
 
         let pipeline = Pipeline::new(
             ctx,
-            &[BufferLayout::default()],
+            &[
+                BufferLayout::default()
+            ],
             &[
                 VertexAttribute::new("pos", VertexFormat::Float3)
             ],

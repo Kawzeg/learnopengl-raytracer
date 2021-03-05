@@ -1,4 +1,3 @@
-
 mod raytracer;
 use raytracer::Raytracer;
 
