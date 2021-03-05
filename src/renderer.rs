@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use crate::util::normalize;
 
 pub trait Renderer {
     /// Returns a texture as rgba pixel array with width and height
@@ -14,15 +15,10 @@ const CHUNK_WIDTH_B: u16 = TEXTURE_WIDTH + 1;
 pub struct SineRenderer {}
 
 impl SineRenderer {
-    fn clamp<T: Into<f64>, U: Into<f64>>(x: T, y: U) -> f64 {
-        let a: f64 = x.into();
-        let b: f64 = y.into();
-        (a % b) / b
-    }
 
     fn b(t: f64, i: usize) -> u8 {
-        let progress = SineRenderer::clamp(i as f64, CHUNK_WIDTH_B);
-        let tm = SineRenderer::clamp(t, SECONDS);
+        let progress = normalize(i as f64, CHUNK_WIDTH_B);
+        let tm = normalize(t, SECONDS);
 
         let x = (tm - progress) * PI * 2.;
 
@@ -31,8 +27,8 @@ impl SineRenderer {
     }
 
     fn r(t: f64, i: usize) -> u8 {
-        let progress = SineRenderer::clamp(i as f64, CHUNK_WIDTH_R);
-        let tm = SineRenderer::clamp(t, SECONDS);
+        let progress = normalize(i as f64, CHUNK_WIDTH_R);
+        let tm = normalize(t, SECONDS);
 
         let x = (tm + progress) * PI * 2.;
 

@@ -4,6 +4,8 @@ use raytracer::Raytracer;
 mod renderer;
 use renderer::{Renderer};
 
+mod util;
+
 use miniquad::*;
 
 #[repr(C)]

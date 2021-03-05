@@ -1,4 +1,7 @@
+use std::f64::consts::PI;
+
 use crate::renderer::Renderer;
+use crate::util::normalize;
 
 #[derive(Clone, Copy, Debug)]
 struct Vec3 {
@@ -30,6 +33,23 @@ impl Vec3 {
 
     fn theta(&self, other: &Vec3) -> f64 {
         (self.dot(other.norm()) / self.mag()).acos()
+    }
+
+    const NULL: Vec3 = Vec3 {
+        x: 0.,
+        y: 0.,
+        z: 0.,
+    };
+}
+
+impl std::ops::Mul<f64> for Vec3 {
+    type Output = Vec3;
+    fn mul(self, rhs: f64) -> Self::Output {
+        Vec3 {
+            x: self.x * rhs,
+            y: self.y * rhs,
+            z: self.z * rhs,
+        }
     }
 }
 
@@ -72,6 +92,13 @@ struct Ray {
     p: Vec3,
     q: Vec3,
 }
+
+impl Ray {
+    const NULL: Ray = Ray {
+        p: Vec3::NULL,
+        q: Vec3::NULL,
+    };
+}
 struct Sphere {
     pos: Vec3,
     r: f64,
@@ -84,17 +111,45 @@ impl Sphere {
 }
 
 impl Renderable for Sphere {
-    fn intersects(&self, r: &Ray) -> bool {
-        if (r.q - r.p).theta(&(self.pos - r.p)) > 90.0_f64.to_radians() {
-            return false;
+    fn intersects(&self, r: &Ray) -> (bool, Ray) {
+        // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
+        let u = (r.q - r.p).norm(); // Unit direction vector
+        let o = r.p;
+        let c = self.pos;
+
+        let udotoc = u.dot(o - c);
+        let ocmag = (o - c).mag();
+        let nabla = (udotoc * udotoc) - ((ocmag * ocmag) - (self.r * self.r));
+        if nabla <= 0. {
+            return (false, Ray::NULL); // No solution / Tangential
         }
-        let d = Sphere::distance(r, self.pos);
-        d < self.r
+        let k1 = -(udotoc) + nabla.sqrt();
+        let k2 = -(udotoc) - nabla.sqrt();
+        let k = k1.min(k2);
+
+        if k < 0. {
+            return (false, Ray::NULL); // Behind the start of the ray
+        }
+
+        let intersection: Vec3 = r.p + (u * k);
+        // Reflection
+        let n = (intersection - self.pos).norm();
+        let reflection: Vec3 = u - ((n * u.dot(n)) * 2.);
+
+        (
+            true,
+            Ray {
+                p: intersection,
+                q: reflection,
+            },
+        )
     }
 }
 
 trait Renderable {
-    fn intersects(&self, l: &Ray) -> bool;
+    /// Returns false and Vec3::NULL if no intersection
+    /// Returns true and a reflected ray if yes intersection
+    fn intersects(&self, l: &Ray) -> (bool, Ray);
 }
 
 pub struct Raytracer {
@@ -103,6 +158,7 @@ pub struct Raytracer {
     dir: Vec3,
     near_plane: f64,
     fov: f64,
+    sunlight: Vec3,
 }
 
 impl Raytracer {
@@ -128,6 +184,11 @@ impl Raytracer {
             },
             near_plane: 1.,
             fov: 60.,
+            sunlight: Vec3 {
+                x: 1.,
+                y: 3.,
+                z: 1.,
+            },
         }
     }
 
@@ -163,11 +224,20 @@ impl Renderer for Raytracer {
                     },
                 };
                 for obj in &self.scene {
-                    if obj.intersects(&ray) {
+                    let (intersects, reflection) = obj.intersects(&ray);
+                    if intersects {
+                        let sun_angle = reflection.q.theta(&self.sunlight);
+                        let lightness = normalize(sun_angle, PI);
+                        let gray: u8 = (lightness * 255.).round() as u8;
+                        
+
                         let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
-                        pixels[i] = 0x18;
-                        pixels[i + 1] = 0x39;
-                        pixels[i + 2] = 0x3E;
+                        let r = 0x18;
+                        let g = 0x39;
+                        let b = 0x3E;
+                        pixels[i] = gray;
+                        pixels[i + 1] = gray;
+                        pixels[i + 2] = gray;
                         pixels[i + 3] = 0xFF;
                         continue;
                     }
