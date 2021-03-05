@@ -16,8 +16,31 @@ impl Vec3 {
         }
     }
 
+    fn dot(&self, other: Vec3) -> f64 {
+        self.x * other.x + self.y * other.y + self.z * other.z
+    }
+
     fn mag(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+
+    fn norm(&self) -> Vec3 {
+        *self / self.mag()
+    }
+
+    fn theta(&self, other: &Vec3) -> f64 {
+        (self.dot(other.norm()) / self.mag()).acos()
+    }
+}
+
+impl std::ops::Div<f64> for Vec3 {
+    type Output = Vec3;
+    fn div(self, rhs: f64) -> Self::Output {
+        Vec3 {
+            x: self.x / rhs,
+            y: self.y / rhs,
+            z: self.z / rhs,
+        }
     }
 }
 
@@ -62,6 +85,9 @@ impl Sphere {
 
 impl Renderable for Sphere {
     fn intersects(&self, r: &Ray) -> bool {
+        if (r.q - r.p).theta(&(self.pos - r.p)) > 90.0_f64.to_radians() {
+            return false;
+        }
         let d = Sphere::distance(r, self.pos);
         d < self.r
     }
@@ -75,7 +101,7 @@ pub struct Raytracer {
     scene: Vec<Box<dyn Renderable>>,
     pos: Vec3,
     dir: Vec3,
-    nearPlane: f64,
+    near_plane: f64,
     fov: f64,
 }
 
@@ -100,13 +126,13 @@ impl Raytracer {
                 y: 0.,
                 z: 1.,
             },
-            nearPlane: 1.,
+            near_plane: 1.,
             fov: 60.,
         }
     }
 
     fn frustum(&self) -> (f64, f64, f64, f64) {
-        let x0 = -0.577350; // FIXME calculate
+        let x0 = 2. * self.near_plane * self.fov.tan();
         let x1 = -x0;
         let ratio = (WIDTH as f64) / (HEIGHT as f64);
         let y0 = x0 / ratio;
@@ -124,7 +150,7 @@ impl Renderer for Raytracer {
     fn render(&mut self, _t: f64) -> (Vec<u8>, u16, u16) {
         let (x0, y0, dx, dy) = self.frustum();
 
-        let mut pixels = vec![0xFF; 4 * WIDTH as usize * HEIGHT as usize];
+        let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
@@ -139,10 +165,10 @@ impl Renderer for Raytracer {
                 for obj in &self.scene {
                     if obj.intersects(&ray) {
                         let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
-                        pixels[i] = 0x00;
-                        pixels[i + 1] = 0;
-                        pixels[i + 2] = 0;
-                        pixels[i + 3] = 0;
+                        pixels[i] = 0x18;
+                        pixels[i + 1] = 0x39;
+                        pixels[i + 2] = 0x3E;
+                        pixels[i + 3] = 0xFF;
                         continue;
                     }
                 }
