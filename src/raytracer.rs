@@ -53,6 +53,17 @@ impl std::ops::Mul<f64> for Vec3 {
     }
 }
 
+impl std::ops::Mul<Vec3> for f64 {
+    type Output = Vec3;
+    fn mul(self, rhs: Vec3) -> Self::Output {
+        Vec3 {
+            x: self * rhs.x,
+            y: self * rhs.y,
+            z: self * rhs.z,
+        }
+    }
+}
+
 impl std::ops::Div<f64> for Vec3 {
     type Output = Vec3;
     fn div(self, rhs: f64) -> Self::Output {
@@ -134,8 +145,9 @@ impl Renderable for Sphere {
         let intersection: Vec3 = r.p + (u * k);
         // Reflection
         let n = (intersection - self.pos).norm();
-        let reflection: Vec3 = u - ((n * u.dot(n)) * 2.);
-
+        let d = u;
+        // let reflection: Vec3 = d - ((((d * 2.).dot(n))) / (n.mag() * n.mag())) * n;
+        let reflection: Vec3 = u - ((n * (u.dot(n) * 2.)));
         (
             true,
             Ray {
@@ -196,7 +208,7 @@ impl Raytracer {
         let x0 = 2. * self.near_plane * self.fov.tan();
         let x1 = -x0;
         let ratio = (WIDTH as f64) / (HEIGHT as f64);
-        let y0 = x0 / ratio;
+        let y0 = -x0 / ratio;
         let y1 = -y0;
         let dx = (x1 - x0) / WIDTH as f64;
         let dy = (y1 - y0) / HEIGHT as f64;
@@ -210,8 +222,6 @@ const HEIGHT: u16 = 1500;
 impl Renderer for Raytracer {
     fn render(&mut self, _t: f64) -> (Vec<u8>, u16, u16) {
         let (x0, y0, dx, dy) = self.frustum();
-
-        println!("x0={}, y0={}", x0, y0);
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
 
@@ -228,7 +238,7 @@ impl Renderer for Raytracer {
                 for obj in &self.scene {
                     let (intersects, reflection) = obj.intersects(&ray);
                     if intersects {
-                        let sun_angle = reflection.q.theta(&self.sunlight);
+                        let sun_angle = self.sunlight.theta(&reflection.q);
                         let lightness = normalize(sun_angle, PI);
                         let gray: u8 = (lightness * 255.).round() as u8;
 

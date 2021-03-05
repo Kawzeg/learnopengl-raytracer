@@ -123,7 +123,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
 
 fn main() {
     miniquad::start(conf::Conf::default(), |mut ctx| {
-        UserData::owning(Stage::new(&mut ctx, LightUpRenderer{}), ctx)
+        UserData::owning(Stage::new(&mut ctx, Raytracer::new()), ctx)
     });
 }
 
