@@ -1,9 +1,10 @@
-use super::{Ray, Rgb, renderable::Renderable, vec3::Vec3};
+use super::{hit::Hit, renderable::Renderable, vec3::Vec3, Ray, Rgb};
 
 pub struct Sphere {
     pub pos: Vec3,
     pub r: f64,
-    pub(in super) color: Rgb,
+    pub(super) color: Rgb,
+    pub reflectivity: f64,
 }
 
 impl Sphere {
@@ -13,7 +14,7 @@ impl Sphere {
 }
 
 impl Renderable for Sphere {
-    fn intersects(&self, r: &Ray) -> (bool, Ray, Rgb) {
+    fn intersects(&self, r: &Ray) -> Option<Hit> {
         // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
         let u = (r.q - r.p).norm(); // Unit direction vector
         let o = r.p;
@@ -23,29 +24,28 @@ impl Renderable for Sphere {
         let ocmag = (o - c).mag();
         let nabla = (udotoc * udotoc) - ((ocmag * ocmag) - (self.r * self.r));
         if nabla <= 0. {
-            return (false, Ray::NULL, Rgb::BLACK); // No solution / Tangential
+            return None; // No solution / Tangential
         }
         let k1 = -(udotoc) + nabla.sqrt();
         let k2 = -(udotoc) - nabla.sqrt();
         let k = k1.min(k2);
 
-        if k < 0. {
-            return (false, Ray::NULL, Rgb::BLACK); // Behind the start of the ray
+        if k < 1. {
+            return None; // Behind the start of the ray
         }
 
         let intersection: Vec3 = r.p + (u * k);
         // Reflection
         let n = (intersection - self.pos).norm();
-        // let d = u;
-        // let reflection: Vec3 = d - ((((d * 2.).dot(n))) / (n.mag() * n.mag())) * n;
-        let reflection: Vec3 = u - (n * (u.dot(n) * 2.));
-        (
-            true,
-            Ray {
+        let reflection: Vec3 = u - (((u * 2.).dot(n)) / (n.mag() * n.mag())) * n;
+        // let reflection: Vec3 = u - (n * (u.dot(n) * 2.));
+        Some(Hit {
+            reflection: Ray {
                 p: intersection,
-                q: reflection,
+                q: intersection + reflection,
             },
-            self.color,
-        )
+            color: self.color,
+            reflectivity: self.reflectivity,
+        })
     }
 }

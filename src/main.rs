@@ -2,7 +2,7 @@ mod raytracer;
 use raytracer::Raytracer;
 
 mod renderer;
-use renderer::{LightUpRenderer, Renderer, SineRenderer};
+use renderer::Renderer;
 
 mod util;
 
