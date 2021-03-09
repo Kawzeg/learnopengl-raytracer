@@ -76,6 +76,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
 
         let (pixels, width, height) = self.renderer.render(t);
         let texture = Texture::from_rgba8(ctx, width, height, &pixels);
+        self.bindings.images[0].delete();
         texture.set_filter(ctx, FilterMode::Nearest);
         self.bindings.images = vec![texture];
 
