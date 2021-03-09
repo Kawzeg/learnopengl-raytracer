@@ -7,6 +7,7 @@ pub struct Plane {
     pub n: Vec3,
     pub(super) color: Rgb,
     pub reflectivity: f64,
+    pub checker: bool,
 }
 
 impl Plane {}
@@ -36,7 +37,16 @@ impl Renderable for Plane {
         let intersection = r.p + (u * k);
         let reflection: Vec3 = u - (self.n * (udotn * 2.));
 
-        let color = if ((intersection.x / 100.).floor() as i64 + (intersection.z / 100.).floor() as i64) % 2 == 0 { Rgb::BLACK } else { Rgb::WHITE };
+        let color;
+        let reflectivity;
+        if self.checker {
+        let black = ((intersection.x / 100.).floor() as i64 + (intersection.z / 100.).floor() as i64) % 2 == 0;
+            color = if black { Rgb::BLACK } else { Rgb::WHITE };
+            reflectivity = if black { self.reflectivity } else { 0.3 };
+        } else {
+            color = self.color;
+            reflectivity = self.reflectivity;
+        }
 
         Some(Hit {
             reflection: Ray {
@@ -44,7 +54,7 @@ impl Renderable for Plane {
                 q: intersection + reflection,
             },
             color,
-            reflectivity: self.reflectivity,
+            reflectivity,
         })
     }
 }

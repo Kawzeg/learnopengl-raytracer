@@ -49,16 +49,16 @@ struct Rgb {
 }
 
 impl Rgb {
-    const BLACK: Rgb = Rgb { r: 0, g: 0, b: 0 };
+    const BLACK: Rgb = Rgb { r: 0x00, g: 0x00, b: 0x00 };
     const WHITE: Rgb = Rgb {
         r: 0xFF,
         g: 0xFF,
         b: 0xFF,
     };
     const SKY: Rgb = Rgb {
-        r: 0x32,
-        g: 0x99,
-        b: 0xCC,
+        r: 0x12,
+        g: 0x12,
+        b: 0x13,
     };
 }
 
@@ -139,6 +139,7 @@ impl Raytracer {
                         },
                         reflectivity: 1.0,
                     }),
+                    // PLANES
                     Box::new(Plane {
                         pos: Vec3 {
                             x: 0.,
@@ -151,7 +152,8 @@ impl Raytracer {
                             z: 0.,
                         },
                         color: Rgb::WHITE,
-                        reflectivity: 0.9,
+                        reflectivity: 0.7,
+                        checker: true,
                     }),
                     Box::new(Plane {
                         pos: Vec3 {
@@ -170,6 +172,7 @@ impl Raytracer {
                             b: 0xAA,
                         },
                         reflectivity: 1.,
+                        checker: false,
                     }),
                     Box::new(Plane {
                         pos: Vec3 {
@@ -188,6 +191,7 @@ impl Raytracer {
                             b: 0xAA,
                         },
                         reflectivity: 1.,
+                        checker: false,
                     }),
                 ],
                 lights: vec![],
@@ -249,7 +253,7 @@ fn intersect(ray: &Ray, scene: &Scene, depth: u32, t: f64) -> Option<Rgb> {
                 let reflected = intersect(&reflection, scene, depth - 1, t);
                 return match reflected {
                     Some(reflected_color) => mix_reflection(*color, reflected_color, *reflectivity),
-                    None => mix_reflection(*color, Rgb::BLACK, *reflectivity), // Background color
+                    None => mix_reflection(*color, Rgb::SKY, *reflectivity), // Background color
                 };
             }
             Some(*color)
@@ -310,7 +314,7 @@ impl Renderer for Raytracer {
                 };
                 let color = match intersect(&ray, &self.scene, depth, t) {
                     Some(x) => Rgba::from(x),
-                    None => Rgba::from(Rgb::BLACK), // Background colour (todo make a constant)
+                    None => Rgba::from(Rgb::SKY), // Background colour (todo make a constant)
                 };
                 let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
                 pixels[i] = color.r;

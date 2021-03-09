@@ -140,8 +140,9 @@ impl<R: Renderer> EventHandler for Stage<R> {
 
 fn main() {
     let raytracer = Raytracer::new();
+    let pngRenderer = PngRenderer::new(Raytracer::new(), 0., PI * 2.);
     miniquad::start(conf::Conf::default(), |mut ctx| {
-        UserData::owning(Stage::new(&mut ctx, PngRenderer::new(raytracer, 0., PI * 2.)), ctx)
+        UserData::owning(Stage::new(&mut ctx, raytracer), ctx)
     });
 }
 
