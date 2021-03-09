@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 miniquad = "0.3.0-alpha.26"
+png = "0.16.8"
