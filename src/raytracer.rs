@@ -215,15 +215,15 @@ impl Raytracer {
         let x0 = 2. * self.near_plane * self.fov.tan();
         let ratio = (WIDTH as f64) / (HEIGHT as f64);
         let y0 = x0 / ratio;
-        let bottomleft: Vec3 = center + left * x0 + down * y0;
+        let topleft: Vec3 = center + left * x0 - down * y0;
 
         let width = x0 * -2.;
         let height = y0 * -2.;
 
         let dx = (width / WIDTH as f64) * left;
-        let dy = (height / HEIGHT as f64) * down;
+        let dy = -(height / HEIGHT as f64) * down;
 
-        (bottomleft, dx, dy)
+        (topleft, dx, dy)
     }
 }
 
@@ -297,7 +297,7 @@ impl Renderer for Raytracer {
         self.pos = path(t);
         self.dir = (-self.pos).norm();
 
-        let (bottomleft, dx, dy) = self.frustum();
+        let (topleft, dx, dy) = self.frustum();
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
         let depth = 7;
@@ -306,7 +306,7 @@ impl Renderer for Raytracer {
             for x in 0..WIDTH {
                 let ray = Ray {
                     p: self.pos,
-                    q: bottomleft + dx * (x as f64) + dy * (y as f64),
+                    q: topleft + dx * (x as f64) + dy * (y as f64),
                 };
                 let color = match intersect(&ray, &self.scene, depth, t) {
                     Some(x) => Rgba::from(x),

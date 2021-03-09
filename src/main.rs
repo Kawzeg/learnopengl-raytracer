@@ -37,10 +37,10 @@ impl<R: Renderer> Stage<R> {
     pub fn new(ctx: &mut Context, renderer: R) -> Stage<R> {
         #[rustfmt::skip]
         let vertices: [Vertex; 4] = [
-            Vertex { pos: Vec2 { x: -1., y: -1. }, uv: Vec2 { x: 0., y: 0. } },
-            Vertex { pos: Vec2 { x:  1., y: -1. }, uv: Vec2 { x: 1., y: 0. } },
-            Vertex { pos: Vec2 { x:  1., y:  1. }, uv: Vec2 { x: 1., y: 1. } },
-            Vertex { pos: Vec2 { x: -1., y:  1. }, uv: Vec2 { x: 0., y: 1. } },
+            Vertex { pos: Vec2 { x: -1., y: -1. }, uv: Vec2 { x: 0., y: 1. } },
+            Vertex { pos: Vec2 { x:  1., y: -1. }, uv: Vec2 { x: 1., y: 1. } },
+            Vertex { pos: Vec2 { x:  1., y:  1. }, uv: Vec2 { x: 1., y: 0. } },
+            Vertex { pos: Vec2 { x: -1., y:  1. }, uv: Vec2 { x: 0., y: 0. } },
         ];
         let vertex_buffer = Buffer::immutable(ctx, BufferType::VertexBuffer, &vertices);
 
@@ -102,19 +102,19 @@ impl<R: Renderer> EventHandler for Stage<R> {
         let vertices: [Vertex; 4] = [
             Vertex {
                 pos: Vec2 { x: x0, y: y0 },
-                uv: Vec2 { x: 0., y: 0. },
+                uv: Vec2 { x: 0., y: 1. },
             },
             Vertex {
                 pos: Vec2 { x: -x0, y: y0 },
-                uv: Vec2 { x: 1., y: 0. },
-            },
-            Vertex {
-                pos: Vec2 { x: -x0, y: -y0 },
                 uv: Vec2 { x: 1., y: 1. },
             },
             Vertex {
+                pos: Vec2 { x: -x0, y: -y0 },
+                uv: Vec2 { x: 1., y: 0. },
+            },
+            Vertex {
                 pos: Vec2 { x: x0, y: -y0 },
-                uv: Vec2 { x: 0., y: 1. },
+                uv: Vec2 { x: 0., y: 0. },
             },
         ];
         self.bindings.vertex_buffers[0].update(ctx, &vertices);
