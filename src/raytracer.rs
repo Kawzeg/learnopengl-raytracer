@@ -55,6 +55,11 @@ impl Rgb {
         g: 0xFF,
         b: 0xFF,
     };
+    const SKY: Rgb = Rgb {
+        r: 0x32,
+        g: 0x99,
+        b: 0xCC,
+    };
 }
 
 #[derive(Debug)]
@@ -141,6 +146,42 @@ impl Raytracer {
                         },
                         color: Rgb::WHITE,
                         reflectivity: 0.9,
+                    }),
+                    Box::new(Plane {
+                        pos: Vec3 {
+                            x: 250.,
+                            y: 0.,
+                            z: 0.,
+                        },
+                        n: Vec3 {
+                            x: -1.,
+                            y: 0.,
+                            z: 0.,
+                        },
+                        color: Rgb {
+                            r: 0xAA,
+                            g: 0xAA,
+                            b: 0xAA,
+                        },
+                        reflectivity: 1.,
+                    }),
+                    Box::new(Plane {
+                        pos: Vec3 {
+                            x: 0.,
+                            y: 0.,
+                            z: 250.,
+                        },
+                        n: Vec3 {
+                            x: 0.,
+                            y: 0.,
+                            z: -1.,
+                        },
+                        color: Rgb {
+                            r: 0xAA,
+                            g: 0xAA,
+                            b: 0xAA,
+                        },
+                        reflectivity: 1.,
                     }),
                 ],
                 lights: vec![],
@@ -229,7 +270,7 @@ fn mix_reflection(color: Rgb, reflected_color: Rgb, reflectivity: f64) -> Option
 }
 
 fn path(t: f64) -> Vec3 {
-    let y = 60. + t.cos() * 30.;
+    let y = t.cos() * 40.;
     let r = 200.;
     let x = r * t.cos();
     let z = r * t.sin();
@@ -241,7 +282,7 @@ impl Renderer for Raytracer {
         let (bottomleft, dx, dy) = self.frustum();
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
-        let depth = 10;
+        let depth = 7;
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
@@ -251,7 +292,7 @@ impl Renderer for Raytracer {
                 };
                 let color = match intersect(&ray, &self.scene, depth) {
                     Some(x) => Rgba::from(x),
-                    None => Rgba::BLACK,
+                    None => Rgba::from(Rgb::BLACK), // Background colour (todo make a constant)
                 };
                 let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
                 pixels[i] = color.r;
