@@ -6,8 +6,8 @@ mod renderable;
 mod sphere;
 mod vec3;
 
-use crate::{HEIGHT, WIDTH, renderer::Renderer};
 use crate::util::normalize;
+use crate::{renderer::Renderer, HEIGHT, WIDTH};
 use hit::Hit;
 use plane::Plane;
 use renderable::Renderable;
@@ -89,11 +89,6 @@ pub struct Raytracer {
     fov: f64,
 }
 
-const SPHERE_POS: Vec3 = Vec3 {
-    x: 0.,
-    y: 50.,
-    z: 100.,
-};
 const START_POS: Vec3 = Vec3 {
     x: 0.,
     y: 70.,
@@ -106,7 +101,11 @@ impl Raytracer {
             scene: Scene {
                 objects: vec![
                     Box::new(Sphere {
-                        pos: SPHERE_POS,
+                        pos: Vec3 {
+                            x: 0.,
+                            y: 0.,
+                            z: 0.,
+                        },
                         r: 30.,
                         color: Rgb {
                             r: 0x18,
@@ -116,24 +115,23 @@ impl Raytracer {
                         reflectivity: 0.5,
                     }),
                     Box::new(Sphere {
-                        pos: SPHERE_POS
-                            + Vec3 {
-                                x: 50.,
-                                y: 20.,
-                                z: 0.,
-                            },
+                        pos: Vec3 {
+                            x: 50.,
+                            y: 20.,
+                            z: 0.,
+                        },
                         r: 10.,
                         color: Rgb {
                             r: 0x4f,
                             g: 0x2c,
                             b: 0x1b,
                         },
-                        reflectivity: 0.,
+                        reflectivity: 0.2,
                     }),
                     Box::new(Plane {
                         pos: Vec3 {
                             x: 0.,
-                            y: 0.,
+                            y: -50.,
                             z: 0.,
                         },
                         n: Vec3 {
@@ -142,7 +140,7 @@ impl Raytracer {
                             z: 0.,
                         },
                         color: Rgb::WHITE,
-                        reflectivity: 0.8,
+                        reflectivity: 0.9,
                     }),
                 ],
                 lights: vec![],
@@ -153,7 +151,7 @@ impl Raytracer {
                 },
             },
             pos: START_POS,
-            dir: (SPHERE_POS - START_POS).norm(),
+            dir: (Vec3::NULL - START_POS).norm(),
             near_plane: 1.,
             fov: 60.,
         }
@@ -203,8 +201,8 @@ fn intersect(ray: &Ray, scene: &Scene, depth: u32) -> Option<Rgb> {
             if depth > 0 && *reflectivity > 0. {
                 let reflected = intersect(&reflection, scene, depth - 1);
                 return match reflected {
-                    Some(reflected_color) => mix_reflection(*color, reflected_color,*reflectivity),
-                    None => mix_reflection(*color, Rgb::BLACK,*reflectivity), // Background color
+                    Some(reflected_color) => mix_reflection(*color, reflected_color, *reflectivity),
+                    None => mix_reflection(*color, Rgb::BLACK, *reflectivity), // Background color
                 };
             }
             Some(*color)
@@ -233,11 +231,9 @@ fn mix_reflection(color: Rgb, reflected_color: Rgb, reflectivity: f64) -> Option
 fn path(t: f64) -> Vec3 {
     let y = 60. + t.cos() * 30.;
     let r = 200.;
-    let x = r * t.cos() + SPHERE_POS.x;
-    let z = r * t.sin() + SPHERE_POS.z;
-    Vec3 {
-        x, y, z
-    }
+    let x = r * t.cos();
+    let z = r * t.sin();
+    Vec3 { x, y, z }
 }
 
 impl Renderer for Raytracer {
@@ -245,7 +241,7 @@ impl Renderer for Raytracer {
         let (bottomleft, dx, dy) = self.frustum();
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
-        let depth = 4;
+        let depth = 10;
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
@@ -267,7 +263,7 @@ impl Renderer for Raytracer {
 
         // Move camera around
         self.pos = path(t);
-        self.dir = (SPHERE_POS - self.pos).norm();
+        self.dir = (-self.pos).norm();
 
         println!("Pos: {:?} Dir: {:?}", self.pos, self.dir);
         (pixels, WIDTH, HEIGHT)
