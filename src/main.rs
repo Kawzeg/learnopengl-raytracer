@@ -112,8 +112,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
                 uv: Vec2 { x: 0., y: 1. },
             },
         ];
-        let vertex_buffer = Buffer::immutable(ctx, BufferType::VertexBuffer, &vertices);
-        self.bindings.vertex_buffers = vec![vertex_buffer];
+        self.bindings.vertex_buffers[0].update(ctx, &vertices);
 
         let dt = date::now() - t;
         println!("Update took {}s", dt);
