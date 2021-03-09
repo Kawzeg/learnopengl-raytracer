@@ -293,6 +293,10 @@ fn moon_path(t: f64) -> Vec3 {
 
 impl Renderer for Raytracer {
     fn render(&mut self, t: f64) -> (Vec<u8>, u16, u16) {
+        // Move camera around
+        self.pos = path(t);
+        self.dir = (-self.pos).norm();
+
         let (bottomleft, dx, dy) = self.frustum();
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
@@ -316,13 +320,7 @@ impl Renderer for Raytracer {
             }
         }
 
-        // Move camera around
-        self.pos = path(t);
-        self.dir = (-self.pos).norm();
-
-        let pos = moon_path(t);
-
-        println!("MoonPos: {:?} Dir: {:?}", pos, self.dir);
+        println!("Pos: {:?} Dir: {:?}", self.pos, self.dir);
         (pixels, WIDTH, HEIGHT)
     }
 }

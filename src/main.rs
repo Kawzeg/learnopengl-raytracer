@@ -1,4 +1,6 @@
 mod raytracer;
+use std::f64::consts::PI;
+
 use png_renderer::PngRenderer;
 use raytracer::Raytracer;
 
@@ -139,7 +141,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
 fn main() {
     let raytracer = Raytracer::new();
     miniquad::start(conf::Conf::default(), |mut ctx| {
-        UserData::owning(Stage::new(&mut ctx, PngRenderer::new(raytracer)), ctx)
+        UserData::owning(Stage::new(&mut ctx, PngRenderer::new(raytracer, 0., PI * 2.)), ctx)
     });
 }
 
