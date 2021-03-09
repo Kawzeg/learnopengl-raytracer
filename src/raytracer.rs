@@ -1,101 +1,53 @@
 use std::f64::consts::PI;
 
+mod plane;
+mod renderable;
+mod sphere;
+mod vec3;
+
 use crate::renderer::Renderer;
 use crate::util::normalize;
+use plane::Plane;
+use renderable::Renderable;
+use sphere::Sphere;
+use vec3::Vec3;
 
-#[derive(Clone, Copy, Debug)]
-struct Vec3 {
-    x: f64,
-    y: f64,
-    z: f64,
+struct Rgba {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
 }
 
-impl Vec3 {
-    fn cross(&self, other: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.y * other.z - self.z * other.y,
-            y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.y * other.x,
-        }
-    }
-
-    fn dot(&self, other: Vec3) -> f64 {
-        self.x * other.x + self.y * other.y + self.z * other.z
-    }
-
-    fn mag(&self) -> f64 {
-        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
-    }
-
-    fn norm(&self) -> Vec3 {
-        *self / self.mag()
-    }
-
-    fn theta(&self, other: &Vec3) -> f64 {
-        self.norm().dot(other.norm()).acos()
-    }
-
-    const NULL: Vec3 = Vec3 {
-        x: 0.,
-        y: 0.,
-        z: 0.,
+impl Rgba {
+    const BLACK: Rgba = Rgba {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
     };
 }
 
-impl std::ops::Mul<f64> for Vec3 {
-    type Output = Vec3;
-    fn mul(self, rhs: f64) -> Self::Output {
-        Vec3 {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
+impl From<Rgb> for Rgba {
+    fn from(other: Rgb) -> Self {
+        Rgba {
+            r: other.r,
+            g: other.g,
+            b: other.b,
+            a: 0xFF,
         }
     }
 }
 
-impl std::ops::Mul<Vec3> for f64 {
-    type Output = Vec3;
-    fn mul(self, rhs: Vec3) -> Self::Output {
-        Vec3 {
-            x: self * rhs.x,
-            y: self * rhs.y,
-            z: self * rhs.z,
-        }
-    }
+#[derive(Clone, Copy)]
+struct Rgb {
+    r: u8,
+    g: u8,
+    b: u8,
 }
 
-impl std::ops::Div<f64> for Vec3 {
-    type Output = Vec3;
-    fn div(self, rhs: f64) -> Self::Output {
-        Vec3 {
-            x: self.x / rhs,
-            y: self.y / rhs,
-            z: self.z / rhs,
-        }
-    }
-}
-
-impl std::ops::Add<Vec3> for Vec3 {
-    type Output = Vec3;
-    fn add(self, rhs: Vec3) -> Vec3 {
-        Vec3 {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
-    }
-}
-
-impl std::ops::Sub<Vec3> for Vec3 {
-    type Output = Vec3;
-
-    fn sub(self, rhs: Vec3) -> Self::Output {
-        Vec3 {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
-        }
-    }
+impl Rgb {
+    const BLACK: Rgb = Rgb { r: 0, g: 0, b: 0 };
 }
 
 #[derive(Debug)]
@@ -110,118 +62,145 @@ impl Ray {
         q: Vec3::NULL,
     };
 }
-struct Sphere {
-    pos: Vec3,
-    r: f64,
+
+trait Light {
+    /// TODO How?
+    fn color(&self, l: &Vec3) -> Rgba;
 }
 
-impl Sphere {
-    fn distance(r: &Ray, p: Vec3) -> f64 {
-        (r.q - r.p).cross(r.p - p).mag() / (r.q - r.p).mag()
-    }
-}
-
-impl Renderable for Sphere {
-    fn intersects(&self, r: &Ray) -> (bool, Ray) {
-        // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
-        let u = (r.q - r.p).norm(); // Unit direction vector
-        let o = r.p;
-        let c = self.pos;
-
-        let udotoc = u.dot(o - c);
-        let ocmag = (o - c).mag();
-        let nabla = (udotoc * udotoc) - ((ocmag * ocmag) - (self.r * self.r));
-        if nabla <= 0. {
-            return (false, Ray::NULL); // No solution / Tangential
-        }
-        let k1 = -(udotoc) + nabla.sqrt();
-        let k2 = -(udotoc) - nabla.sqrt();
-        let k = k1.min(k2);
-
-        if k < 0. {
-            return (false, Ray::NULL); // Behind the start of the ray
-        }
-
-        let intersection: Vec3 = r.p + (u * k);
-        // Reflection
-        let n = (intersection - self.pos).norm();
-        let d = u;
-        // let reflection: Vec3 = d - ((((d * 2.).dot(n))) / (n.mag() * n.mag())) * n;
-        let reflection: Vec3 = u - ((n * (u.dot(n) * 2.)));
-        (
-            true,
-            Ray {
-                p: intersection,
-                q: reflection,
-            },
-        )
-    }
-}
-
-trait Renderable {
-    /// Returns false and Vec3::NULL if no intersection
-    /// Returns true and a reflected ray if yes intersection
-    fn intersects(&self, l: &Ray) -> (bool, Ray);
+struct Scene {
+    objects: Vec<Box<dyn Renderable>>,
+    lights: Vec<Box<dyn Light>>,
+    sunlight: Vec3,
 }
 
 pub struct Raytracer {
-    scene: Vec<Box<dyn Renderable>>,
+    scene: Scene,
     pos: Vec3,
     dir: Vec3,
     near_plane: f64,
     fov: f64,
-    sunlight: Vec3,
 }
 
 impl Raytracer {
     pub fn new() -> Raytracer {
         Raytracer {
-            scene: vec![Box::new(Sphere {
-                pos: Vec3 {
-                    x: 0.,
-                    y: 0.,
-                    z: 100.,
+            scene: Scene {
+                objects: vec![
+                    Box::new(Sphere {
+                        pos: SPHERE_POS,
+                        r: 30.,
+                        color: Rgb {
+                            r: 0x18,
+                            g: 0x39,
+                            b: 0x3E,
+                        },
+                    }), /*
+                        Box::new(Plane {
+                            pos: Vec3 {
+                                x: 0.,
+                                y: 0.,
+                                z: 0.,
+                            },
+                            n: Vec3 {
+                                x: 0.,
+                                y: 1.,
+                                z: 0.,
+                            },
+                        }),*/
+                ],
+                lights: vec![],
+                sunlight: Vec3 {
+                    x: 5.,
+                    y: -3.,
+                    z: 1.,
                 },
-                r: 30.,
-            })],
-            pos: Vec3 {
-                x: 0.,
-                y: 0.,
-                z: 0.,
             },
-            dir: Vec3 {
-                x: 0.,
-                y: 0.,
-                z: 1.,
-            },
+            pos: START_POS,
+            dir: (SPHERE_POS - START_POS).norm(),
             near_plane: 1.,
             fov: 60.,
-            sunlight: Vec3 {
-                x: 0.,
-                y: -1.,
-                z: 0.,
-            },
         }
     }
 
-    fn frustum(&self) -> (f64, f64, f64, f64) {
+    /// Returns three Vec3s: bottom left corner, dx, and dy
+    fn frustum(&self) -> (Vec3, Vec3, Vec3) {
+        let left = self.dir.cross(Vec3::UP);
+        let down = self.dir.cross(left);
+
+        // Calculate top left corner
+        let center = self.near_plane * self.dir + self.pos;
+        // x and y unit distance
         let x0 = 2. * self.near_plane * self.fov.tan();
-        let x1 = -x0;
         let ratio = (WIDTH as f64) / (HEIGHT as f64);
-        let y0 = -x0 / ratio;
-        let y1 = -y0;
-        let dx = (x1 - x0) / WIDTH as f64;
-        let dy = (y1 - y0) / HEIGHT as f64;
-        (x0, y0, dx, dy)
+        let y0 = x0 / ratio;
+        let bottomleft: Vec3 = center + left * x0 + down * y0;
+
+        let width = x0 * -2.;
+        let height = y0 * -2.;
+
+        let dx = (width / WIDTH as f64) * left;
+        let dy = (height / HEIGHT as f64) * down;
+
+        (bottomleft, dx, dy)
     }
 }
 
-const WIDTH: u16 = 2000;
-const HEIGHT: u16 = 1500;
+const WIDTH: u16 = 400;
+const HEIGHT: u16 = 300;
+const SPHERE_POS: Vec3 = Vec3 {
+    x: 0.,
+    y: 0.,
+    z: 100.,
+};
+const START_POS: Vec3 = Vec3 {
+    x: 0.,
+    y: 0.,
+    z: 0.,
+};
+
+fn intersect(ray: &Ray, scene: &Scene, depth: u32) -> Option<Rgb> {
+    for obj in &scene.objects {
+        let (intersects, reflection, color) = obj.intersects(&ray);
+        if intersects {
+            let sun_angle = scene.sunlight.theta(&reflection.q);
+            let lightness: f64;
+            if sun_angle < PI / 2. {
+                // More than 90°
+                lightness = 0.;
+            } else {
+                lightness = normalize(sun_angle - (PI / 2.), PI / 2.);
+            }
+            let gray: u8 = (lightness * 255.).round() as u8;
+
+            /*
+            pixels[i] = (lightness * r).round() as u8;
+            pixels[i + 1] = (lightness * g).round() as u8;
+            pixels[i + 2] = (lightness * b).round() as u8;
+            */
+            /*let color = Rgba {
+                r: gray,
+                g: gray,
+                b: gray,
+                a: 0xFF,
+            };
+            */
+            if depth > 0 {
+                let reflected = intersect(&reflection, scene, depth - 1);
+                match reflected {
+                    other @ Some(_) => return other,
+                    None => return Some(color),
+                }
+            }
+            return Some(color);
+        }
+    }
+    None
+}
 
 impl Renderer for Raytracer {
     fn render(&mut self, _t: f64) -> (Vec<u8>, u16, u16) {
-        let (x0, y0, dx, dy) = self.frustum();
+        let (bottomleft, dx, dy) = self.frustum();
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
 
@@ -229,38 +208,23 @@ impl Renderer for Raytracer {
             for x in 0..WIDTH {
                 let ray = Ray {
                     p: self.pos,
-                    q: Vec3 {
-                        x: x0 + (dx * x as f64),
-                        y: y0 + (dy * y as f64),
-                        z: 1.,
-                    },
+                    q: bottomleft + dx * (x as f64) + dy * (y as f64),
                 };
-                for obj in &self.scene {
-                    let (intersects, reflection) = obj.intersects(&ray);
-                    if intersects {
-                        let sun_angle = self.sunlight.theta(&reflection.q);
-                        let lightness = normalize(sun_angle, PI);
-                        let gray: u8 = (lightness * 255.).round() as u8;
-
-                        let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
-                        let r = 0x18 as f64;
-                        let g = 0x39 as f64;
-                        let b = 0x3E as f64;
-                        /*
-                        pixels[i] = (lightness * r).round() as u8;
-                        pixels[i + 1] = (lightness * g).round() as u8;
-                        pixels[i + 2] = (lightness * b).round() as u8;
-                        */
-                        pixels[i] = gray;
-                        pixels[i + 1] = gray;
-                        pixels[i + 2] = gray;
-                        pixels[i + 3] = 0xFF;
-                        continue;
-                    }
-                }
+                let color = match intersect(&ray, &self.scene, 0) {
+                    Some(x) => Rgba::from(x),
+                    None => Rgba::BLACK,
+                };
+                let i = (((y as usize * WIDTH as usize) + x as usize) * 4) as usize;
+                pixels[i] = color.r;
+                pixels[i + 1] = color.g;
+                pixels[i + 2] = color.b;
+                pixels[i + 3] = color.a;
             }
         }
 
-        (pixels, WIDTH, HEIGHT) // FIXME remove
+        let left = self.dir.cross(Vec3::UP).norm();
+        self.pos = self.pos - left;
+        self.dir = (SPHERE_POS - self.pos).norm();
+        (pixels, WIDTH, HEIGHT)
     }
 }
