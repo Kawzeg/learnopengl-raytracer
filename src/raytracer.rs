@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::{cmp::Ordering, f64::consts::PI};
 
 mod hit;
 mod plane;
@@ -99,7 +99,7 @@ const SPHERE_POS: Vec3 = Vec3 {
 const START_POS: Vec3 = Vec3 {
     x: 0.,
     y: 70.,
-    z: -100.,
+    z: 0.,
 };
 
 impl Raytracer {
@@ -118,7 +118,12 @@ impl Raytracer {
                         reflectivity: 0.5,
                     }),
                     Box::new(Sphere {
-                        pos: SPHERE_POS + Vec3{x:50., y: 20., z: 0.},
+                        pos: SPHERE_POS
+                            + Vec3 {
+                                x: 50.,
+                                y: 20.,
+                                z: 0.,
+                            },
                         r: 10.,
                         color: Rgb {
                             r: 0x4f,
@@ -180,28 +185,33 @@ impl Raytracer {
 }
 
 fn intersect(ray: &Ray, scene: &Scene, depth: u32) -> Option<Rgb> {
-    for obj in &scene.objects {
-        match obj.intersects(&ray) {
-            Some(Hit {
-                reflection,
-                color,
-                reflectivity,
-            }) => {
-                if depth > 0 && reflectivity > 0. {
-                    let reflected = intersect(&reflection, scene, depth - 1);
-                    return match reflected {
-                        Some(reflected_color) => {
-                            mix_reflection(color, reflected_color, reflectivity)
-                        }
-                        None => mix_reflection(color, Rgb::BLACK, reflectivity), // Background color
-                    };
-                }
-                return Some(color);
+    let mut hits: Vec<Hit> = (&scene.objects)
+        .into_iter()
+        .filter_map(|obj| obj.intersects(&ray))
+        .collect();
+    hits.sort_by(|a, b| {
+        ((a.reflection.p - ray.p)
+            .mag()
+            .partial_cmp(&(b.reflection.p - ray.p).mag()))
+        .unwrap_or(Ordering::Greater)
+    });
+    match hits.first() {
+        None => None,
+        Some(Hit {
+            reflection,
+            color,
+            reflectivity,
+        }) => {
+            if depth > 0 && *reflectivity > 0. {
+                let reflected = intersect(&reflection, scene, depth - 1);
+                return match reflected {
+                    Some(reflected_color) => mix_reflection(*color, reflected_color,*reflectivity),
+                    None => mix_reflection(*color, Rgb::BLACK,*reflectivity), // Background color
+                };
             }
-            _ => {}
+            Some(*color)
         }
     }
-    None
 }
 
 fn interpolate(a: f64, b: f64, t: f64) -> f64 {
@@ -222,12 +232,22 @@ fn mix_reflection(color: Rgb, reflected_color: Rgb, reflectivity: f64) -> Option
     })
 }
 
+fn path(t: f64) -> Vec3 {
+    let y = 60. + t.cos() * 30.;
+    let r = 200.;
+    let x = r * t.cos() + SPHERE_POS.x;
+    let z = r * t.sin() + SPHERE_POS.z;
+    Vec3 {
+        x, y, z
+    }
+}
+
 impl Renderer for Raytracer {
-    fn render(&mut self, _t: f64) -> (Vec<u8>, u16, u16) {
+    fn render(&mut self, t: f64) -> (Vec<u8>, u16, u16) {
         let (bottomleft, dx, dy) = self.frustum();
 
         let mut pixels = vec![0x00; 4 * WIDTH as usize * HEIGHT as usize];
-        let depth = 3;
+        let depth = 4;
 
         for y in 0..HEIGHT {
             for x in 0..WIDTH {
@@ -247,10 +267,10 @@ impl Renderer for Raytracer {
             }
         }
 
-        let left = self.dir.cross(Vec3::UP).norm();
+        // Move camera around
+        self.pos = path(t);
         self.dir = (SPHERE_POS - self.pos).norm();
-        self.pos = self.pos + left;
-        
+
         println!("Pos: {:?} Dir: {:?}", self.pos, self.dir);
         (pixels, WIDTH, HEIGHT)
     }
