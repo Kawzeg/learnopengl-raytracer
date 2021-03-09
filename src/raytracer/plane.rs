@@ -12,7 +12,7 @@ pub struct Plane {
 impl Plane {}
 
 impl Renderable for Plane {
-    fn intersects(&self, r: &Ray) -> Option<Hit> {
+    fn intersects(&self, r: &Ray, _t: f64) -> Option<Hit> {
         // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
         let u = (r.q - r.p).norm(); // Unit direction vector
 

@@ -1,5 +1,15 @@
 use super::{hit::Hit, renderable::Renderable, vec3::Vec3, Ray, Rgb};
 
+pub struct MovingSphere<T>
+where
+    T: Fn(f64) -> Vec3,
+{
+    pub pos: T,
+    pub r: f64,
+    pub(super) color: Rgb,
+    pub reflectivity: f64,
+}
+
 pub struct Sphere {
     pub pos: Vec3,
     pub r: f64,
@@ -11,18 +21,22 @@ impl Sphere {
     fn distance(r: &Ray, p: Vec3) -> f64 {
         (r.q - r.p).cross(r.p - p).mag() / (r.q - r.p).mag()
     }
-}
 
-impl Renderable for Sphere {
-    fn intersects(&self, r: &Ray) -> Option<Hit> {
+    fn intersects(
+        pos: Vec3,
+        radius: f64,
+        ray: &Ray,
+        color: Rgb,
+        reflectivity: f64,
+    ) -> Option<Hit> {
         // https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
-        let u = (r.q - r.p).norm(); // Unit direction vector
-        let o = r.p;
-        let c = self.pos;
+        let u = (ray.q - ray.p).norm(); // Unit direction vector
+        let o = ray.p;
+        let c = pos;
 
         let udotoc = u.dot(o - c);
         let ocmag = (o - c).mag();
-        let nabla = (udotoc * udotoc) - ((ocmag * ocmag) - (self.r * self.r));
+        let nabla = (udotoc * udotoc) - ((ocmag * ocmag) - (radius * radius));
         if nabla <= 0. {
             return None; // No solution / Tangential
         }
@@ -34,9 +48,9 @@ impl Renderable for Sphere {
             return None; // Behind the start of the ray
         }
 
-        let intersection: Vec3 = r.p + (u * k);
+        let intersection: Vec3 = ray.p + (u * k);
         // Reflection
-        let n = (intersection - self.pos).norm();
+        let n = (intersection - pos).norm();
         let reflection: Vec3 = u - (((u * 2.).dot(n)) / (n.mag() * n.mag())) * n;
         // let reflection: Vec3 = u - (n * (u.dot(n) * 2.));
         Some(Hit {
@@ -44,8 +58,20 @@ impl Renderable for Sphere {
                 p: intersection,
                 q: intersection + reflection,
             },
-            color: self.color,
-            reflectivity: self.reflectivity,
+            color,
+            reflectivity,
         })
+    }
+}
+
+impl<T: Fn(f64) -> Vec3> Renderable for MovingSphere<T> {
+    fn intersects(&self, l: &Ray, t: f64) -> Option<Hit> {
+        Sphere::intersects((self.pos)(t), self.r, l, self.color, self.reflectivity)
+    }
+}
+
+impl Renderable for Sphere {
+    fn intersects(&self, r: &Ray, _t: f64) -> Option<Hit> {
+        Sphere::intersects(self.pos, self.r, r, self.color, self.reflectivity)
     }
 }

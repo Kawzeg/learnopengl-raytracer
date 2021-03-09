@@ -11,7 +11,7 @@ use crate::{renderer::Renderer, HEIGHT, WIDTH};
 use hit::Hit;
 use plane::Plane;
 use renderable::Renderable;
-use sphere::Sphere;
+use sphere::{MovingSphere, Sphere};
 use vec3::Vec3;
 
 struct Rgba {
@@ -105,6 +105,26 @@ impl Raytracer {
         Raytracer {
             scene: Scene {
                 objects: vec![
+                    Box::new(MovingSphere {
+                        pos: moon_path,
+                        r: 10.,
+                        color: Rgb {
+                            r: 0x18,
+                            g: 0x39,
+                            b: 0x3E,
+                        },
+                        reflectivity: 0.2,
+                    }),
+                    Box::new(MovingSphere {
+                        pos: |t| -moon_path(t),
+                        r: 5.,
+                        color: Rgb {
+                            r: 0x4f,
+                            g: 0x2c,
+                            b: 0x1b,
+                        },
+                        reflectivity: 0.5,
+                    }),
                     Box::new(Sphere {
                         pos: Vec3 {
                             x: 0.,
@@ -113,30 +133,16 @@ impl Raytracer {
                         },
                         r: 30.,
                         color: Rgb {
-                            r: 0x18,
-                            g: 0x39,
-                            b: 0x3E,
-                        },
-                        reflectivity: 0.5,
-                    }),
-                    Box::new(Sphere {
-                        pos: Vec3 {
-                            x: 50.,
-                            y: 20.,
-                            z: 0.,
-                        },
-                        r: 10.,
-                        color: Rgb {
                             r: 0x4f,
                             g: 0x2c,
                             b: 0x1b,
                         },
-                        reflectivity: 0.2,
+                        reflectivity: 1.0,
                     }),
                     Box::new(Plane {
                         pos: Vec3 {
                             x: 0.,
-                            y: -50.,
+                            y: -100.,
                             z: 0.,
                         },
                         n: Vec3 {
@@ -221,10 +227,10 @@ impl Raytracer {
     }
 }
 
-fn intersect(ray: &Ray, scene: &Scene, depth: u32) -> Option<Rgb> {
+fn intersect(ray: &Ray, scene: &Scene, depth: u32, t: f64) -> Option<Rgb> {
     let mut hits: Vec<Hit> = (&scene.objects)
         .into_iter()
-        .filter_map(|obj| obj.intersects(&ray))
+        .filter_map(|obj| obj.intersects(&ray, t))
         .collect();
     hits.sort_by(|a, b| {
         ((a.reflection.p - ray.p)
@@ -240,7 +246,7 @@ fn intersect(ray: &Ray, scene: &Scene, depth: u32) -> Option<Rgb> {
             reflectivity,
         }) => {
             if depth > 0 && *reflectivity > 0. {
-                let reflected = intersect(&reflection, scene, depth - 1);
+                let reflected = intersect(&reflection, scene, depth - 1, t);
                 return match reflected {
                     Some(reflected_color) => mix_reflection(*color, reflected_color, *reflectivity),
                     None => mix_reflection(*color, Rgb::BLACK, *reflectivity), // Background color
@@ -277,6 +283,14 @@ fn path(t: f64) -> Vec3 {
     Vec3 { x, y, z }
 }
 
+fn moon_path(t: f64) -> Vec3 {
+    let z = 0.;
+    let r = 60.;
+    let x = r * (2.*t).sin();
+    let y = r * (2.*t).cos();
+    Vec3 { x, y, z }
+}
+
 impl Renderer for Raytracer {
     fn render(&mut self, t: f64) -> (Vec<u8>, u16, u16) {
         let (bottomleft, dx, dy) = self.frustum();
@@ -290,7 +304,7 @@ impl Renderer for Raytracer {
                     p: self.pos,
                     q: bottomleft + dx * (x as f64) + dy * (y as f64),
                 };
-                let color = match intersect(&ray, &self.scene, depth) {
+                let color = match intersect(&ray, &self.scene, depth, t) {
                     Some(x) => Rgba::from(x),
                     None => Rgba::from(Rgb::BLACK), // Background colour (todo make a constant)
                 };
@@ -306,7 +320,9 @@ impl Renderer for Raytracer {
         self.pos = path(t);
         self.dir = (-self.pos).norm();
 
-        println!("Pos: {:?} Dir: {:?}", self.pos, self.dir);
+        let pos = moon_path(t);
+
+        println!("MoonPos: {:?} Dir: {:?}", pos, self.dir);
         (pixels, WIDTH, HEIGHT)
     }
 }
