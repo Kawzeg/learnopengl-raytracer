@@ -8,6 +8,9 @@ mod util;
 
 use miniquad::*;
 
+const WIDTH: u16 = 400;
+const HEIGHT: u16 = 300;
+
 #[repr(C)]
 struct Vec2 {
     x: f32,
@@ -40,8 +43,8 @@ impl<R: Renderer> Stage<R> {
         let index_buffer = Buffer::immutable(ctx, BufferType::IndexBuffer, &indices);
 
         #[rustfmt::skip]
-        let pixels: Vec<u8> = vec![0xFF; 0];
-        let texture = Texture::from_rgba8(ctx, 0, 0, &pixels);
+        let pixels: Vec<u8> = vec![0xFF; WIDTH as usize * HEIGHT as usize * 4];
+        let texture = Texture::from_rgba8(ctx, WIDTH, HEIGHT, &pixels);
         texture.set_filter(ctx, FilterMode::Nearest);
 
         let bindings = Bindings {
@@ -75,10 +78,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
         let t = date::now();
 
         let (pixels, width, height) = self.renderer.render(t);
-        let texture = Texture::from_rgba8(ctx, width, height, &pixels);
-        self.bindings.images[0].delete();
-        texture.set_filter(ctx, FilterMode::Nearest);
-        self.bindings.images = vec![texture];
+        self.bindings.images[0].update(ctx, &pixels);
 
         let r2 = width as f32 / height as f32;
         let (screen_width, screen_height) = ctx.screen_size();
@@ -93,12 +93,24 @@ impl<R: Renderer> EventHandler for Stage<R> {
             y0 = -1.;
             x0 = -r2 / r1;
         }
-        
+
         let vertices: [Vertex; 4] = [
-            Vertex { pos: Vec2 { x:  x0, y:  y0 }, uv: Vec2 { x: 0., y: 0. } },
-            Vertex { pos: Vec2 { x: -x0, y:  y0 }, uv: Vec2 { x: 1., y: 0. } },
-            Vertex { pos: Vec2 { x: -x0, y: -y0 }, uv: Vec2 { x: 1., y: 1. } },
-            Vertex { pos: Vec2 { x:  x0, y: -y0 }, uv: Vec2 { x: 0., y: 1. } },
+            Vertex {
+                pos: Vec2 { x: x0, y: y0 },
+                uv: Vec2 { x: 0., y: 0. },
+            },
+            Vertex {
+                pos: Vec2 { x: -x0, y: y0 },
+                uv: Vec2 { x: 1., y: 0. },
+            },
+            Vertex {
+                pos: Vec2 { x: -x0, y: -y0 },
+                uv: Vec2 { x: 1., y: 1. },
+            },
+            Vertex {
+                pos: Vec2 { x: x0, y: -y0 },
+                uv: Vec2 { x: 0., y: 1. },
+            },
         ];
         let vertex_buffer = Buffer::immutable(ctx, BufferType::VertexBuffer, &vertices);
         self.bindings.vertex_buffers = vec![vertex_buffer];

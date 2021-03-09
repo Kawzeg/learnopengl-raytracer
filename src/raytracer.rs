@@ -6,7 +6,7 @@ mod renderable;
 mod sphere;
 mod vec3;
 
-use crate::renderer::Renderer;
+use crate::{HEIGHT, WIDTH, renderer::Renderer};
 use crate::util::normalize;
 use hit::Hit;
 use plane::Plane;
@@ -89,8 +89,6 @@ pub struct Raytracer {
     fov: f64,
 }
 
-const WIDTH: u16 = 400;
-const HEIGHT: u16 = 300;
 const SPHERE_POS: Vec3 = Vec3 {
     x: 0.,
     y: 50.,
