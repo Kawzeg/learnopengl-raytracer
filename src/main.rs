@@ -142,7 +142,7 @@ impl<R: Renderer> EventHandler for Stage<R> {
 fn main() {
     // TODO: Choose by command line args
     let raytracer = Raytracer::new();
-    let pngRenderer = PngRenderer::new(Raytracer::new(), 0., 2.*PI);
+    let png_renderer = PngRenderer::new(Raytracer::new(), 0., 2.*PI);
     miniquad::start(conf::Conf::default(), |mut ctx| {
         UserData::owning(Stage::new(&mut ctx, raytracer), ctx)
     });
