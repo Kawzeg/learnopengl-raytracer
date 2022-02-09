@@ -56,9 +56,9 @@ impl Rgb {
         b: 0xFF,
     };
     const SKY: Rgb = Rgb {
-        r: 0x12,
-        g: 0x12,
-        b: 0x13,
+        r: 0x42,
+        g: 0x42,
+        b: 0x43,
     };
 }
 

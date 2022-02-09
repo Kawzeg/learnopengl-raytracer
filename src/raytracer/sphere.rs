@@ -1,10 +1,8 @@
 use super::{hit::Hit, renderable::Renderable, vec3::Vec3, Ray, Rgb};
 
-pub struct MovingSphere<T>
-where
-    T: Fn(f64) -> Vec3,
+pub struct MovingSphere
 {
-    pub pos: T,
+    pub pos: fn(f64) -> Vec3,
     pub r: f64,
     pub(super) color: Rgb,
     pub reflectivity: f64,
@@ -64,7 +62,7 @@ impl Sphere {
     }
 }
 
-impl<T: Fn(f64) -> Vec3> Renderable for MovingSphere<T> {
+impl Renderable for MovingSphere {
     fn intersects(&self, l: &Ray, t: f64) -> Option<Hit> {
         Sphere::intersects((self.pos)(t), self.r, l, self.color, self.reflectivity)
     }
