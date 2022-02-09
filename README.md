@@ -1,11 +1,17 @@
 # Raytracer
 
+# Running
+
+Run with
+```
+> cargo run
+```
+
 # Building & testing wasm
 
 ```
 > cargo build --target wasm32-unknown-unknown
-> basic-http-server .
 ```
 
-Point browser to localhost:4000. The wasm file (`target/wasm32-unknown-unknown/debug/learnopengl-raytracer.wasm`)
-and loaded by index.html.
+The `.wasm` file is placed at `target/wasm32-unknown-unknown/debug/learnopengl-raytracer.wasm`.
+Serve this folder with your favourite http server & open `index.html` in your browser.
